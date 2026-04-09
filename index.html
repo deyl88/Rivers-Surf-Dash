@@ -2,10 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+  />
   <title>Surf Dash</title>
   <style>
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
     html, body {
       margin: 0;
       padding: 0;
@@ -16,6 +20,8 @@
       background: linear-gradient(to bottom, #87ceeb 0%, #bfe9ff 35%, #2f9fd8 36%, #1f7db0 100%);
       touch-action: manipulation;
       user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
     }
 
     #game {
@@ -23,6 +29,7 @@
       width: 100vw;
       height: 100vh;
       overflow: hidden;
+      touch-action: manipulation;
     }
 
     #hud {
@@ -38,6 +45,7 @@
       font-size: 22px;
       font-weight: bold;
       text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+      pointer-events: none;
     }
 
     #waterline {
@@ -61,6 +69,7 @@
       justify-content: center;
       font-size: 44px;
       transition: transform 0.05s linear;
+      pointer-events: none;
     }
 
     #playerLabel {
@@ -85,15 +94,11 @@
       align-items: center;
       justify-content: center;
       font-size: 34px;
+      pointer-events: none;
     }
 
-    .wave {
-      font-size: 40px;
-    }
-
-    .rock {
-      font-size: 32px;
-    }
+    .wave { font-size: 40px; }
+    .rock { font-size: 32px; }
 
     .coin {
       font-size: 30px;
@@ -113,6 +118,7 @@
       background-size: 160px 16px;
       animation: foamMove 2s linear infinite;
       opacity: 0.75;
+      pointer-events: none;
     }
 
     @keyframes foamMove {
@@ -169,6 +175,7 @@
       background: white;
       color: #0b4f73;
       min-width: 180px;
+      touch-action: manipulation;
     }
 
     button:active {
@@ -186,6 +193,7 @@
       font-weight: bold;
       text-shadow: 0 2px 4px rgba(0,0,0,0.45);
       opacity: 0.9;
+      pointer-events: none;
     }
 
     .sun {
@@ -197,6 +205,7 @@
       border-radius: 50%;
       background: rgba(255, 228, 126, 0.95);
       box-shadow: 0 0 40px rgba(255, 220, 100, 0.75);
+      pointer-events: none;
     }
 
     .cloud {
@@ -204,6 +213,7 @@
       background: rgba(255,255,255,0.85);
       border-radius: 30px;
       height: 26px;
+      pointer-events: none;
     }
 
     .cloud:before, .cloud:after {
@@ -268,8 +278,8 @@
       <p>Choose your surfer, then tap to jump over waves and rocks. Grab stoke points. Stay up as long as you can.</p>
       <h2>Pick your surfer</h2>
       <div class="buttonRow">
-        <button onclick="chooseCharacter('River')">🌊 River</button>
-        <button onclick="chooseCharacter('Daniel')">☀️ Daniel</button>
+        <button id="riverBtn" type="button">🌊 River</button>
+        <button id="danielBtn" type="button">☀️ Daniel</button>
       </div>
     </div>
 
@@ -277,7 +287,7 @@
       <h1 id="readyTitle">River is ready</h1>
       <p>Tap to jump. Avoid obstacles. Collect ⭐ for extra points.</p>
       <div class="buttonRow">
-        <button onclick="startGame()">Start Surfing</button>
+        <button id="startBtn" type="button">Start Surfing</button>
       </div>
     </div>
 
@@ -286,8 +296,8 @@
       <h2 id="finalMessage">Nice run</h2>
       <p>Final score: <span id="finalScore">0</span></p>
       <div class="buttonRow">
-        <button onclick="restartToCharacterSelect()">Choose Surfer</button>
-        <button onclick="startGame()">Surf Again</button>
+        <button id="chooseBtn" type="button">Choose Surfer</button>
+        <button id="againBtn" type="button">Surf Again</button>
       </div>
     </div>
   </div>
@@ -306,6 +316,12 @@
     const gameOverScreen = document.getElementById("gameOverScreen");
     const finalScoreEl = document.getElementById("finalScore");
     const finalMessageEl = document.getElementById("finalMessage");
+
+    const riverBtn = document.getElementById("riverBtn");
+    const danielBtn = document.getElementById("danielBtn");
+    const startBtn = document.getElementById("startBtn");
+    const chooseBtn = document.getElementById("chooseBtn");
+    const againBtn = document.getElementById("againBtn");
 
     const GROUND_Y = 96;
     const PLAYER_X = () => parseInt(getComputedStyle(player).left, 10);
@@ -352,6 +368,7 @@
       readyTitle.textContent = data.label + " is ready";
       startScreen.style.display = "none";
       readyScreen.style.display = "flex";
+      gameOverScreen.style.display = "none";
     }
 
     function resetGameState() {
@@ -361,21 +378,24 @@
       velocityY = 0;
       spawnTimer = 0;
       scoreTimer = 0;
+
       obstacles.forEach(o => o.el.remove());
       coins.forEach(c => c.el.remove());
       obstacles = [];
       coins = [];
+
       scoreEl.textContent = score;
-      player.style.transform = `translateY(0px) rotate(0deg)`;
+      player.style.transform = "translateY(0px) rotate(0deg)";
     }
 
     function startGame() {
       if (!selectedCharacter) return;
 
       resetGameState();
-      gameOverScreen.style.display = "none";
-      readyScreen.style.display = "none";
       startScreen.style.display = "none";
+      readyScreen.style.display = "none";
+      gameOverScreen.style.display = "none";
+
       gameRunning = true;
       cancelAnimationFrame(frameId);
       frameId = requestAnimationFrame(gameLoop);
@@ -384,11 +404,12 @@
     function restartToCharacterSelect() {
       gameRunning = false;
       cancelAnimationFrame(frameId);
-      gameOverScreen.style.display = "none";
-      readyScreen.style.display = "none";
-      startScreen.style.display = "flex";
       resetGameState();
+      selectedCharacter = null;
       currentCharacterEl.textContent = "-";
+      readyScreen.style.display = "none";
+      gameOverScreen.style.display = "none";
+      startScreen.style.display = "flex";
     }
 
     function jump() {
@@ -412,8 +433,7 @@
         x: window.innerWidth,
         y: GROUND_Y,
         w: type === "wave" ? 46 : 40,
-        h: type === "wave" ? 42 : 36,
-        type
+        h: type === "wave" ? 42 : 36
       });
     }
 
@@ -445,11 +465,9 @@
     }
 
     function getPlayerRect() {
-      const x = PLAYER_X() + 10;
-      const y = GROUND_Y + playerY + 4;
       return {
-        x,
-        y,
+        x: PLAYER_X() + 10,
+        y: GROUND_Y + playerY + 4,
         w: 46,
         h: 56
       };
@@ -502,9 +520,7 @@
         scoreTimer = 0;
       }
 
-      if (score > 0 && score % 80 === 0) {
-        speed = Math.min(13, 7 + score / 160);
-      }
+      speed = Math.min(13, 7 + score / 160);
 
       const playerRect = getPlayerRect();
 
@@ -560,11 +576,47 @@
       frameId = requestAnimationFrame(gameLoop);
     }
 
-    game.addEventListener("click", jump);
-    game.addEventListener("touchstart", function(e) {
-      e.preventDefault();
+    function bindPress(el, handler) {
+      el.addEventListener("click", handler);
+      el.addEventListener("touchstart", function(e) {
+        e.preventDefault();
+        handler(e);
+      }, { passive: false });
+      el.addEventListener("pointerdown", function(e) {
+        if (e.pointerType === "touch") {
+          e.preventDefault();
+          handler(e);
+        }
+      });
+    }
+
+    bindPress(riverBtn, () => chooseCharacter("River"));
+    bindPress(danielBtn, () => chooseCharacter("Daniel"));
+    bindPress(startBtn, startGame);
+    bindPress(chooseBtn, restartToCharacterSelect);
+    bindPress(againBtn, startGame);
+
+    function handleGamePress(e) {
+      if (!gameRunning) return;
+
+      if (
+        e.target.tagName === "BUTTON" ||
+        e.target.closest(".buttonRow") ||
+        e.target.closest(".screen")
+      ) {
+        return;
+      }
+
+      if (typeof e.preventDefault === "function") {
+        e.preventDefault();
+      }
+
       jump();
-    }, { passive: false });
+    }
+
+    game.addEventListener("click", handleGamePress);
+    game.addEventListener("touchstart", handleGamePress, { passive: false });
+    game.addEventListener("pointerdown", handleGamePress);
 
     window.addEventListener("keydown", function(e) {
       if (e.code === "Space" || e.code === "ArrowUp") {
