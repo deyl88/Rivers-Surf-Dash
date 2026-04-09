@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Surf Dash</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to bottom, #87ceeb 0%, #bfe9ff 35%, #2f9fd8 36%, #1f7db0 100%);
+      touch-action: manipulation;
+      user-select: none;
+    }
+
+    #game {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 20;
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 16px;
+      color: white;
+      font-size: 22px;
+      font-weight: bold;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    #waterline {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 90px;
+      height: 6px;
+      background: rgba(255,255,255,0.35);
+    }
+
+    #player {
+      position: absolute;
+      left: 90px;
+      bottom: 96px;
+      width: 70px;
+      height: 70px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 44px;
+      transition: transform 0.05s linear;
+    }
+
+    #playerLabel {
+      position: absolute;
+      bottom: -24px;
+      width: 120px;
+      left: -25px;
+      text-align: center;
+      font-size: 16px;
+      color: white;
+      font-weight: bold;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+    }
+
+    .obstacle, .coin {
+      position: absolute;
+      bottom: 96px;
+      width: 50px;
+      height: 50px;
+      z-index: 8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 34px;
+    }
+
+    .wave {
+      font-size: 40px;
+    }
+
+    .rock {
+      font-size: 32px;
+    }
+
+    .coin {
+      font-size: 30px;
+      bottom: 150px;
+    }
+
+    .foam {
+      position: absolute;
+      bottom: 88px;
+      left: 0;
+      right: 0;
+      height: 16px;
+      background:
+        radial-gradient(circle at 20px 8px, rgba(255,255,255,0.7) 0 6px, transparent 7px),
+        radial-gradient(circle at 80px 6px, rgba(255,255,255,0.55) 0 5px, transparent 6px),
+        radial-gradient(circle at 140px 10px, rgba(255,255,255,0.65) 0 6px, transparent 7px);
+      background-size: 160px 16px;
+      animation: foamMove 2s linear infinite;
+      opacity: 0.75;
+    }
+
+    @keyframes foamMove {
+      from { background-position-x: 0; }
+      to { background-position-x: -160px; }
+    }
+
+    .screen {
+      position: absolute;
+      inset: 0;
+      z-index: 30;
+      background: rgba(0, 30, 60, 0.82);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      text-align: center;
+      padding: 24px;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 44px;
+    }
+
+    h2 {
+      margin: 8px 0;
+      font-size: 30px;
+    }
+
+    p {
+      margin: 8px 0;
+      font-size: 18px;
+      max-width: 700px;
+      line-height: 1.4;
+    }
+
+    .buttonRow {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 18px;
+    }
+
+    button {
+      border: none;
+      border-radius: 16px;
+      padding: 16px 24px;
+      font-size: 22px;
+      font-weight: bold;
+      cursor: pointer;
+      background: white;
+      color: #0b4f73;
+      min-width: 180px;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    #tapHint {
+      position: absolute;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.45);
+      opacity: 0.9;
+    }
+
+    .sun {
+      position: absolute;
+      top: 50px;
+      right: 70px;
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: rgba(255, 228, 126, 0.95);
+      box-shadow: 0 0 40px rgba(255, 220, 100, 0.75);
+    }
+
+    .cloud {
+      position: absolute;
+      background: rgba(255,255,255,0.85);
+      border-radius: 30px;
+      height: 26px;
+    }
+
+    .cloud:before, .cloud:after {
+      content: "";
+      position: absolute;
+      background: rgba(255,255,255,0.85);
+      border-radius: 50%;
+    }
+
+    .cloud:before {
+      width: 28px;
+      height: 28px;
+      left: 12px;
+      top: -10px;
+    }
+
+    .cloud:after {
+      width: 36px;
+      height: 36px;
+      left: 34px;
+      top: -14px;
+    }
+
+    #cloud1 { top: 70px; left: 70px; width: 90px; }
+    #cloud2 { top: 120px; left: 240px; width: 110px; }
+    #cloud3 { top: 90px; left: 460px; width: 100px; }
+
+    @media (max-width: 700px) {
+      h1 { font-size: 34px; }
+      button { min-width: 140px; font-size: 20px; }
+      #hud { font-size: 18px; }
+      #player { left: 50px; width: 64px; height: 64px; font-size: 40px; }
+      #playerLabel { left: -30px; width: 120px; font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="game">
+    <div class="sun"></div>
+    <div id="cloud1" class="cloud"></div>
+    <div id="cloud2" class="cloud"></div>
+    <div id="cloud3" class="cloud"></div>
+
+    <div id="hud">
+      <div>Score: <span id="score">0</span></div>
+      <div>Best: <span id="best">0</span></div>
+      <div>Surfer: <span id="currentCharacter">-</span></div>
+    </div>
+
+    <div id="waterline"></div>
+    <div class="foam"></div>
+
+    <div id="player">
+      <div id="playerEmoji">🏄‍♂️</div>
+      <div id="playerLabel">River</div>
+    </div>
+
+    <div id="tapHint">Tap anywhere to jump</div>
+
+    <div id="startScreen" class="screen">
+      <h1>Surf Dash</h1>
+      <p>Choose your surfer, then tap to jump over waves and rocks. Grab stoke points. Stay up as long as you can.</p>
+      <h2>Pick your surfer</h2>
+      <div class="buttonRow">
+        <button onclick="chooseCharacter('River')">🌊 River</button>
+        <button onclick="chooseCharacter('Daniel')">☀️ Daniel</button>
+      </div>
+    </div>
+
+    <div id="readyScreen" class="screen" style="display:none;">
+      <h1 id="readyTitle">River is ready</h1>
+      <p>Tap to jump. Avoid obstacles. Collect ⭐ for extra points.</p>
+      <div class="buttonRow">
+        <button onclick="startGame()">Start Surfing</button>
+      </div>
+    </div>
+
+    <div id="gameOverScreen" class="screen" style="display:none;">
+      <h1>Wipeout!</h1>
+      <h2 id="finalMessage">Nice run</h2>
+      <p>Final score: <span id="finalScore">0</span></p>
+      <div class="buttonRow">
+        <button onclick="restartToCharacterSelect()">Choose Surfer</button>
+        <button onclick="startGame()">Surf Again</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const game = document.getElementById("game");
+    const player = document.getElementById("player");
+    const playerEmoji = document.getElementById("playerEmoji");
+    const playerLabel = document.getElementById("playerLabel");
+    const scoreEl = document.getElementById("score");
+    const bestEl = document.getElementById("best");
+    const currentCharacterEl = document.getElementById("currentCharacter");
+    const startScreen = document.getElementById("startScreen");
+    const readyScreen = document.getElementById("readyScreen");
+    const readyTitle = document.getElementById("readyTitle");
+    const gameOverScreen = document.getElementById("gameOverScreen");
+    const finalScoreEl = document.getElementById("finalScore");
+    const finalMessageEl = document.getElementById("finalMessage");
+
+    const GROUND_Y = 96;
+    const PLAYER_X = () => parseInt(getComputedStyle(player).left, 10);
+
+    let selectedCharacter = null;
+    let gameRunning = false;
+    let score = 0;
+    let best = Number(localStorage.getItem("surfDashBest") || 0);
+
+    let playerY = 0;
+    let velocityY = 0;
+    let gravity = 0.9;
+    let jumpPower = 15.5;
+
+    let frameId = null;
+    let spawnTimer = 0;
+    let scoreTimer = 0;
+    let speed = 7;
+
+    let obstacles = [];
+    let coins = [];
+
+    const characterData = {
+      River: {
+        emoji: "🏄‍♂️",
+        label: "River",
+        message: "River caught a nice one."
+      },
+      Daniel: {
+        emoji: "🏄",
+        label: "Daniel",
+        message: "Daniel was charging."
+      }
+    };
+
+    bestEl.textContent = best;
+
+    function chooseCharacter(name) {
+      selectedCharacter = name;
+      const data = characterData[name];
+      playerEmoji.textContent = data.emoji;
+      playerLabel.textContent = data.label;
+      currentCharacterEl.textContent = data.label;
+      readyTitle.textContent = data.label + " is ready";
+      startScreen.style.display = "none";
+      readyScreen.style.display = "flex";
+    }
+
+    function resetGameState() {
+      score = 0;
+      speed = 7;
+      playerY = 0;
+      velocityY = 0;
+      spawnTimer = 0;
+      scoreTimer = 0;
+      obstacles.forEach(o => o.el.remove());
+      coins.forEach(c => c.el.remove());
+      obstacles = [];
+      coins = [];
+      scoreEl.textContent = score;
+      player.style.transform = `translateY(0px) rotate(0deg)`;
+    }
+
+    function startGame() {
+      if (!selectedCharacter) return;
+
+      resetGameState();
+      gameOverScreen.style.display = "none";
+      readyScreen.style.display = "none";
+      startScreen.style.display = "none";
+      gameRunning = true;
+      cancelAnimationFrame(frameId);
+      frameId = requestAnimationFrame(gameLoop);
+    }
+
+    function restartToCharacterSelect() {
+      gameRunning = false;
+      cancelAnimationFrame(frameId);
+      gameOverScreen.style.display = "none";
+      readyScreen.style.display = "none";
+      startScreen.style.display = "flex";
+      resetGameState();
+      currentCharacterEl.textContent = "-";
+    }
+
+    function jump() {
+      if (!gameRunning) return;
+      if (playerY === 0) {
+        velocityY = jumpPower;
+      }
+    }
+
+    function spawnObstacle() {
+      const el = document.createElement("div");
+      const type = Math.random() < 0.55 ? "wave" : "rock";
+      el.className = "obstacle " + type;
+      el.textContent = type === "wave" ? "🌊" : "🪨";
+      el.style.left = window.innerWidth + "px";
+      el.style.bottom = GROUND_Y + "px";
+      game.appendChild(el);
+
+      obstacles.push({
+        el,
+        x: window.innerWidth,
+        y: GROUND_Y,
+        w: type === "wave" ? 46 : 40,
+        h: type === "wave" ? 42 : 36,
+        type
+      });
+    }
+
+    function spawnCoin() {
+      const el = document.createElement("div");
+      el.className = "coin";
+      el.textContent = "⭐";
+      const y = Math.random() < 0.5 ? 150 : 190;
+      el.style.left = window.innerWidth + "px";
+      el.style.bottom = y + "px";
+      game.appendChild(el);
+
+      coins.push({
+        el,
+        x: window.innerWidth,
+        y,
+        w: 30,
+        h: 30
+      });
+    }
+
+    function rectsOverlap(a, b) {
+      return (
+        a.x < b.x + b.w &&
+        a.x + a.w > b.x &&
+        a.y < b.y + b.h &&
+        a.y + a.h > b.y
+      );
+    }
+
+    function getPlayerRect() {
+      const x = PLAYER_X() + 10;
+      const y = GROUND_Y + playerY + 4;
+      return {
+        x,
+        y,
+        w: 46,
+        h: 56
+      };
+    }
+
+    function endGame() {
+      gameRunning = false;
+      cancelAnimationFrame(frameId);
+
+      if (score > best) {
+        best = score;
+        localStorage.setItem("surfDashBest", best);
+        bestEl.textContent = best;
+      }
+
+      finalScoreEl.textContent = score;
+      finalMessageEl.textContent = characterData[selectedCharacter].message;
+      gameOverScreen.style.display = "flex";
+    }
+
+    function gameLoop() {
+      if (!gameRunning) return;
+
+      velocityY -= gravity;
+      playerY += velocityY;
+
+      if (playerY < 0) {
+        playerY = 0;
+        velocityY = 0;
+      }
+
+      const rotate = playerY > 0 ? -8 : 0;
+      player.style.transform = `translateY(${-playerY}px) rotate(${rotate}deg)`;
+
+      spawnTimer++;
+      scoreTimer++;
+
+      if (spawnTimer > Math.max(45, 95 - Math.floor(speed * 5))) {
+        if (Math.random() < 0.78) {
+          spawnObstacle();
+        } else {
+          spawnCoin();
+        }
+        spawnTimer = 0;
+      }
+
+      if (scoreTimer > 12) {
+        score += 1;
+        scoreEl.textContent = score;
+        scoreTimer = 0;
+      }
+
+      if (score > 0 && score % 80 === 0) {
+        speed = Math.min(13, 7 + score / 160);
+      }
+
+      const playerRect = getPlayerRect();
+
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const o = obstacles[i];
+        o.x -= speed;
+        o.el.style.left = o.x + "px";
+
+        const obstacleRect = {
+          x: o.x + 4,
+          y: o.y + 4,
+          w: o.w,
+          h: o.h
+        };
+
+        if (rectsOverlap(playerRect, obstacleRect)) {
+          endGame();
+          return;
+        }
+
+        if (o.x < -80) {
+          o.el.remove();
+          obstacles.splice(i, 1);
+        }
+      }
+
+      for (let i = coins.length - 1; i >= 0; i--) {
+        const c = coins[i];
+        c.x -= speed;
+        c.el.style.left = c.x + "px";
+
+        const coinRect = {
+          x: c.x + 6,
+          y: c.y + 6,
+          w: c.w,
+          h: c.h
+        };
+
+        if (rectsOverlap(playerRect, coinRect)) {
+          score += 25;
+          scoreEl.textContent = score;
+          c.el.remove();
+          coins.splice(i, 1);
+          continue;
+        }
+
+        if (c.x < -80) {
+          c.el.remove();
+          coins.splice(i, 1);
+        }
+      }
+
+      frameId = requestAnimationFrame(gameLoop);
+    }
+
+    game.addEventListener("click", jump);
+    game.addEventListener("touchstart", function(e) {
+      e.preventDefault();
+      jump();
+    }, { passive: false });
+
+    window.addEventListener("keydown", function(e) {
+      if (e.code === "Space" || e.code === "ArrowUp") {
+        e.preventDefault();
+        jump();
+      }
+    });
+  </script>
+</body>
+</html>
